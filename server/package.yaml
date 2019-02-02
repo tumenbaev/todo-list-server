@@ -27,6 +27,8 @@ dependencies:
 - text
 - ini
 - transformers
+- aeson
+- bson
 
 library:
   source-dirs: src
