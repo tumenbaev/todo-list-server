@@ -4,7 +4,7 @@ module Main where
 
 import Lib
 import Models (TodoItem(..))
-import Web.Scotty (scotty, get, text, json)
+import Web.Scotty (scotty, get, post, text, json, jsonData)
 import Data.Monoid (mconcat)
 import Control.Monad.IO.Class
 import qualified Data.Text.Lazy as T
@@ -13,9 +13,9 @@ import Data.Text (Text(..), unpack)
 import Data.Text.Read (decimal)
 import Control.Monad.Trans.Except (ExceptT(..))
 
-import Data.Bson (typed, valueAt)
+import Data.Bson (typed, valueAt, ObjectId)
 import Database.MongoDB (
-  Action, Document, Value, Pipe, Query, access, close, connect, delete,
+  Action, Document, Value(..), Pipe, Query, access, close, connect, delete, save,
   exclude, find, host, insertMany, master, project, rest, readHostPort, auth,
   select, sort, (=:), Host(..), PortID(PortNumber))
 import Network.Socket (PortNumber)
@@ -45,10 +45,21 @@ startServer (host, port, user, pass) = do
   scotty 3000 $ do
     get "/items" $ do
       res <- liftIO $ accessDb pipe $ find (select [] "items") >>= rest
-      json $ getItem <$> res
+      json $ documentToItem <$> res
+    post "/items" $ do
+      item <- jsonData
+      res <- liftIO $ accessDb pipe $ save "items" $ itemToDocument item
+      json item
 
-getItem :: Document -> TodoItem
-getItem doc = TodoItem id content done where
+documentToItem :: Document -> TodoItem
+documentToItem doc = TodoItem id content done where
   id = show $ valueAt "_id" doc
   content = typed $ valueAt "content" doc
-  done = typed $ valueAt "done" doc  
+  done = typed $ valueAt "done" doc
+
+itemToDocument :: TodoItem -> Document
+itemToDocument (TodoItem id content done) = [
+  "_id" =: (read id :: ObjectId),
+  "content" =: content,
+  "done" =: done
+  ]
