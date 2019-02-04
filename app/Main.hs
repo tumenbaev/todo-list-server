@@ -1,35 +1,35 @@
-{-# LANGUAGE OverloadedStrings #-}
 {-# LANGUAGE ExtendedDefaultRules #-}
+{-# LANGUAGE OverloadedStrings    #-}
 module Main where
 
-import Prelude hiding (lookup)
-import Lib
-import Models (TodoItem(..))
-import Web.Scotty (scotty, get, post, put, text, json, jsonData)
-import Data.Monoid (mconcat)
-import Control.Monad.IO.Class
-import Data.Text.Lazy (pack)
-import Data.Ini (readIniFile, lookupValue, readValue, Ini(..))
-import Data.Text (Text(..), unpack)
-import Data.Text.Read (decimal)
-import Control.Monad.Trans.Except (ExceptT(..))
+import           Control.Monad.IO.Class (MonadIO, liftIO)
+import           Data.Ini               (Ini (..), lookupValue, readIniFile,
+                                         readValue)
+import           Data.Text              (Text (..), unpack)
+import           Data.Text.Lazy         (pack)
+import           Data.Text.Read         (decimal)
+import           Lib
+import           Models                 (TodoItem (..))
+import           Web.Scotty             (get, json, jsonData, post, put, scotty,
+                                         text)
 
-import Data.Bson (typed, valueAt, at, look, lookup, ObjectId)
-import Database.MongoDB (
-  Action, Document, Value(..), Pipe, Query, access, close, connect, delete, insert, save,
-  exclude, find, host, insertMany, master, project, rest, readHostPort, auth, at,
-  select, sort, (=:), (!?), Host(..), PortID(PortNumber))
-import Network.Socket (PortNumber)
+import           Data.Bson              (ObjectId, at, look)
+import           Database.MongoDB       (Action, Document, Host (..), Pipe,
+                                         PortID (PortNumber), Query, Value (..),
+                                         access, at, auth, close, connect,
+                                         delete, find, host, insert, master,
+                                         rest, save, select, sort, (=:))
+import           Network.Socket         (PortNumber)
 
 main = do
   ini <- readIniFile "config.ini"
   case getConf ini of
-    Left error -> print error
+    Left error   -> print error
     Right config -> startServer config
 
 accessDb :: MonadIO m => Pipe -> Action m a -> m a
 accessDb pipe = access pipe master "maverick"
-    
+
 getConf :: Either String Ini -> Either String (String, PortNumber, Text, Text)
 getConf eitherIni = do
   ini <- eitherIni
