@@ -2,22 +2,23 @@
 {-# LANGUAGE ExtendedDefaultRules #-}
 module Main where
 
+import Prelude hiding (lookup)
 import Lib
 import Models (TodoItem(..))
-import Web.Scotty (scotty, get, post, text, json, jsonData)
+import Web.Scotty (scotty, get, post, put, text, json, jsonData)
 import Data.Monoid (mconcat)
 import Control.Monad.IO.Class
-import qualified Data.Text.Lazy as T
+import Data.Text.Lazy (pack)
 import Data.Ini (readIniFile, lookupValue, readValue, Ini(..))
 import Data.Text (Text(..), unpack)
 import Data.Text.Read (decimal)
 import Control.Monad.Trans.Except (ExceptT(..))
 
-import Data.Bson (typed, valueAt, ObjectId)
+import Data.Bson (typed, valueAt, at, look, lookup, ObjectId)
 import Database.MongoDB (
-  Action, Document, Value(..), Pipe, Query, access, close, connect, delete, save,
-  exclude, find, host, insertMany, master, project, rest, readHostPort, auth,
-  select, sort, (=:), Host(..), PortID(PortNumber))
+  Action, Document, Value(..), Pipe, Query, access, close, connect, delete, insert, save,
+  exclude, find, host, insertMany, master, project, rest, readHostPort, auth, at,
+  select, sort, (=:), (!?), Host(..), PortID(PortNumber))
 import Network.Socket (PortNumber)
 
 main = do
@@ -50,15 +51,23 @@ startServer (host, port, user, pass) = do
       item <- jsonData
       res <- liftIO $ accessDb pipe $ save "items" $ itemToDocument item
       json item
+    put "/items" $ do
+      item <- jsonData
+      newId <- liftIO $ accessDb pipe $ insert "items" $ itemToDocument item
+      text $ pack $ show newId
 
 documentToItem :: Document -> TodoItem
 documentToItem doc = TodoItem id content done where
-  id = show $ valueAt "_id" doc
-  content = typed $ valueAt "content" doc
-  done = typed $ valueAt "done" doc
+  id = fmap show (look "_id" doc)
+  content = at "content" doc
+  done = at "done" doc
 
 itemToDocument :: TodoItem -> Document
-itemToDocument (TodoItem id content done) = [
+itemToDocument (TodoItem Nothing content done) = [
+  "content" =: content,
+  "done" =: done
+  ]
+itemToDocument (TodoItem (Just id) content done) = [
   "_id" =: (read id :: ObjectId),
   "content" =: content,
   "done" =: done

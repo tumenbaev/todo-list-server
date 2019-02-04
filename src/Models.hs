@@ -8,12 +8,12 @@ import GHC.Generics
 import Data.Aeson (ToJSON, FromJSON, toEncoding, genericToEncoding, defaultOptions)
 
 data TodoItem = TodoItem {
-  id :: String,
+  id :: Maybe String,
   content :: String,
   done :: Bool
 } deriving (Generic, Show)
-  
+
 instance ToJSON TodoItem where
     toEncoding = genericToEncoding defaultOptions
-  
+
 instance FromJSON TodoItem
