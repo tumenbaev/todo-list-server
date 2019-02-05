@@ -10,15 +10,16 @@ import           Data.Text.Lazy         (pack)
 import           Data.Text.Read         (decimal)
 import           Lib
 import           Models                 (TodoItem (..))
-import           Web.Scotty             (get, json, jsonData, post, put, scotty,
-                                         text)
+import           Web.Scotty             (delete, get, json, jsonData, param,
+                                         post, put, scotty, text)
 
 import           Data.Bson              (ObjectId, at, look)
 import           Database.MongoDB       (Action, Document, Host (..), Pipe,
                                          PortID (PortNumber), Query, Value (..),
                                          access, at, auth, close, connect,
-                                         delete, find, host, insert, master,
-                                         rest, save, select, sort, (=:))
+                                         deleteOne, find, host, insert, master,
+                                         rest, save, select, selector, sort,
+                                         (=:))
 import           Network.Socket         (PortNumber)
 
 main = do
@@ -55,6 +56,10 @@ startServer (host, port, user, pass) = do
       item <- jsonData
       newId <- liftIO $ accessDb pipe $ insert "items" $ itemToDocument item
       text $ pack $ show newId
+    delete "/items/:id" $ do
+      id <- param "id"
+      liftIO $ accessDb pipe $ deleteOne $ select ["_id" =: (read id :: ObjectId)] "items"
+      return ()
 
 documentToItem :: Document -> TodoItem
 documentToItem doc = TodoItem id content done where

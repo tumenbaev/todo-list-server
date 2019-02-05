@@ -4,13 +4,14 @@ module Models (
   TodoItem(..)
 ) where
 
-import GHC.Generics
-import Data.Aeson (ToJSON, FromJSON, toEncoding, genericToEncoding, defaultOptions)
+import           Data.Aeson   (FromJSON, ToJSON, defaultOptions,
+                               genericToEncoding, toEncoding)
+import           GHC.Generics
 
 data TodoItem = TodoItem {
-  id :: Maybe String,
+  id      :: Maybe String,
   content :: String,
-  done :: Bool
+  done    :: Bool
 } deriving (Generic, Show)
 
 instance ToJSON TodoItem where
