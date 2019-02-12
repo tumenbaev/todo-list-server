@@ -10,8 +10,9 @@ import           Data.Text.Lazy         (pack)
 import           Data.Text.Read         (decimal)
 import           Lib
 import           Models                 (TodoItem (..))
-import           Web.Scotty             (delete, get, json, jsonData, param,
-                                         post, put, scotty, text)
+import           Web.Scotty             (delete, get, json, jsonData,
+                                         middleware, param, post, put, scotty,
+                                         text)
 
 import           Data.Bson              (ObjectId, at, look)
 import           Database.MongoDB       (Action, Document, Host (..), Pipe,
@@ -21,6 +22,7 @@ import           Database.MongoDB       (Action, Document, Host (..), Pipe,
                                          rest, save, select, selector, sort,
                                          (=:))
 import           Network.Socket         (PortNumber)
+import           Network.Wai.Middleware.Cors (cors, CorsResourcePolicy(..), simpleHeaders)
 
 main = do
   ini <- readIniFile "config.ini"
@@ -44,7 +46,17 @@ startServer :: (String, PortNumber, Text, Text) -> IO ()
 startServer (host, port, user, pass) = do
   pipe <- connect $ Host host $ PortNumber port
   accessDb pipe $ auth user pass
-  scotty 3000 $ do
+  scotty 4000 $ do
+    middleware $ cors $ const $ Just CorsResourcePolicy {
+      corsMethods=["GET","PUT","POST","DELETE"],
+      corsOrigins=Nothing,
+      corsRequestHeaders=simpleHeaders,
+      corsExposedHeaders=Nothing,
+      corsMaxAge=Nothing,
+      corsVaryOrigin=False,
+      corsRequireOrigin=False,
+      corsIgnoreFailures=False
+      }
     get "/items" $ do
       res <- liftIO $ accessDb pipe $ find (select [] "items") >>= rest
       json $ documentToItem <$> res

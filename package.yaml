@@ -29,6 +29,7 @@ dependencies:
 - transformers
 - aeson
 - bson
+- wai-cors
 
 library:
   source-dirs: src
